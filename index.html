@@ -9,7 +9,7 @@
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: 'Albert Sans', Arial, sans-serif; background: #0f1117; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    .topbar { background: #111827; border-bottom: 3px solid #E87722; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .topbar { background: #111827; border-bottom: 3px solid #E87722; padding: 0 24px; height: 0px; overflow: hidden; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
     .topbar-left { display: flex; align-items: center; gap: 14px; }
     .topbar-title { color: #fff; font-weight: 700; font-size: 14px; }
     .topbar-sub { color: #E87722; font-size: 10px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
@@ -72,6 +72,10 @@
   </div>
 
   <div class="tabs-bar">
+    <svg viewBox="0 0 96 72" fill="none" width="32" height="24" style="margin-right:8px;flex-shrink:0">
+      <polygon points="48,2 70,36 26,36" fill="#E87722"/>
+      <text x="1" y="68" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="25" fill="white" letter-spacing="1.5">SGTM</text>
+    </svg>
     <div class="tab active" onclick="switchTab(0)">
       <div class="tab-icon">1</div>
       Suivi Avancement Chambords
@@ -87,6 +91,8 @@
       Suivi Avancement Gradins
       <div class="tab-status" id="status2"></div>
     </div>
+    <div style="flex:1"></div>
+    <button class="btn-connect-all" onclick="connectAll()">🔑 Connecter tous les dashboards</button>
   </div>
 
   <div class="frames-container">
