@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SGTM – Tableaux de bord BIM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Albert Sans', Arial, sans-serif; background: #0f1117; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    .topbar { background: #111827; border-bottom: 3px solid #E87722; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .topbar-left { display: flex; align-items: center; gap: 14px; }
+    .topbar-title { color: #fff; font-weight: 700; font-size: 14px; }
+    .topbar-sub { color: #E87722; font-size: 10px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+    .btn-connect-all {
+      background: #E87722; color: #fff; border: none;
+      padding: 7px 14px; border-radius: 6px; font-size: 11px;
+      font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    .btn-connect-all:hover { background: #d06a1a; }
+
+    .tabs-bar { background: #111827; border-bottom: 1px solid #1f2937; display: flex; align-items: center; padding: 0 16px; gap: 4px; flex-shrink: 0; height: 44px; }
+
+    .tab { display: flex; align-items: center; gap: 8px; padding: 0 18px; height: 44px; color: #6b7280; cursor: pointer; font-size: 12px; font-weight: 500; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
+    .tab:hover { color: #d1d5db; }
+    .tab.active { color: #E87722; border-bottom-color: #E87722; }
+    .tab-icon { width: 18px; height: 18px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+    .tab.active .tab-icon { background: #E87722; color: #fff; }
+    .tab:not(.active) .tab-icon { background: #1f2937; color: #6b7280; }
+
+    .tab-status { width: 7px; height: 7px; border-radius: 50%; background: #374151; margin-left: 4px; }
+    .tab-status.connected { background: #22c55e; }
+
+    .loading-overlay { position: absolute; inset: 0; background: #0f1117; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 10; transition: opacity 0.4s; }
+    .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+    .loading-spinner { width: 40px; height: 40px; border: 3px solid #1f2937; border-top-color: #E87722; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { color: #6b7280; font-size: 13px; }
+
+    .connect-overlay { position: absolute; inset: 0; background: #0f1117; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; z-index: 10; }
+    .connect-overlay.hidden { display: none; }
+    .connect-title { color: #fff; font-size: 16px; font-weight: 600; }
+    .connect-sub { color: #6b7280; font-size: 12px; text-align: center; max-width: 320px; line-height: 1.6; }
+    .btn-connect { background: #E87722; color: #fff; border: none; padding: 12px 28px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .btn-connect:hover { background: #d06a1a; }
+
+    .frames-container { flex: 1; position: relative; overflow: hidden; }
+    .frame-wrapper { position: absolute; inset: 0; display: none; }
+    .frame-wrapper.active { display: block; }
+    iframe { width: 100%; height: 100%; border: none; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <svg viewBox="0 0 96 72" fill="none" width="48" height="36">
+        <polygon points="48,2 70,36 26,36" fill="#E87722"/>
+        <text x="1" y="68" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="25" fill="white" letter-spacing="1.5">SGTM</text>
+      </svg>
+      <div>
+        <div class="topbar-title">Grand Stade Hassan II — Province de Benslimane</div>
+        <div class="topbar-sub">Tableaux de bord BIM — Suivi des travaux</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-connect-all" onclick="connectAll()">🔑 Connecter tous les dashboards</button>
+    </div>
+  </div>
+
+  <div class="tabs-bar">
+    <div class="tab active" onclick="switchTab(0)">
+      <div class="tab-icon">1</div>
+      Suivi Avancement Chambords
+      <div class="tab-status" id="status0"></div>
+    </div>
+    <div class="tab" onclick="switchTab(1)">
+      <div class="tab-icon">2</div>
+      Fondations &amp; Pieux
+      <div class="tab-status" id="status1"></div>
+    </div>
+    <div class="tab" onclick="switchTab(2)">
+      <div class="tab-icon">3</div>
+      Suivi Avancement Gradins
+      <div class="tab-status" id="status2"></div>
+    </div>
+  </div>
+
+  <div class="frames-container">
+
+    <!-- Dashboard 1 : Chambords -->
+    <div class="frame-wrapper active" id="wrapper0">
+      <div class="connect-overlay" id="connectOverlay0">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#E87722" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        <div class="connect-title">Dashboard Chambords</div>
+        <div class="connect-sub">Connectez-vous avec votre compte Autodesk pour accéder à la maquette BIM.</div>
+        <button class="btn-connect" onclick="connectDashboard(0)">Se connecter à ACC</button>
+      </div>
+      <div class="loading-overlay hidden" id="loading0">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Chargement du dashboard Chambords…</div>
+      </div>
+      <iframe id="frame0" src="about:blank" onload="onFrameLoad(0)"></iframe>
+    </div>
+
+    <!-- Dashboard 2 : Fondations -->
+    <div class="frame-wrapper" id="wrapper1">
+      <div class="connect-overlay" id="connectOverlay1">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#E87722" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        <div class="connect-title">Dashboard Fondations &amp; Pieux</div>
+        <div class="connect-sub">Connectez-vous avec votre compte Autodesk pour accéder à la maquette BIM.</div>
+        <button class="btn-connect" onclick="connectDashboard(1)">Se connecter à ACC</button>
+      </div>
+      <div class="loading-overlay hidden" id="loading1">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Chargement du dashboard Fondations…</div>
+      </div>
+      <iframe id="frame1" src="about:blank" onload="onFrameLoad(1)"></iframe>
+    </div>
+
+    <!-- Dashboard 3 : Gradins -->
+    <div class="frame-wrapper" id="wrapper2">
+      <div class="connect-overlay" id="connectOverlay2">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#E87722" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        <div class="connect-title">Dashboard Gradins</div>
+        <div class="connect-sub">Connectez-vous avec votre compte Autodesk pour accéder à la maquette BIM.</div>
+        <button class="btn-connect" onclick="connectDashboard(2)">Se connecter à ACC</button>
+      </div>
+      <div class="loading-overlay hidden" id="loading2">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Chargement du dashboard Gradins…</div>
+      </div>
+      <iframe id="frame2" src="about:blank" onload="onFrameLoad(2)"></iframe>
+    </div>
+
+  </div>
+
+  <script>
+    const URLS = [
+      'https://bim-dashboard-aps.onrender.com/',
+      'https://fondations.onrender.com/',
+      'https://gradins-rtt5.onrender.com/'
+    ];
+
+    const LOGIN_URLS = [
+      'https://bim-dashboard-aps.onrender.com/api/auth/login',
+      'https://fondations.onrender.com/api/auth/login',
+      'https://gradins-rtt5.onrender.com/api/auth/login'
+    ];
+
+    const connected = [false, false, false];
+    const loaded    = [false, false, false];
+
+    function switchTab(index) {
+      document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === index));
+      document.querySelectorAll('.frame-wrapper').forEach((w, i) => w.classList.toggle('active', i === index));
+    }
+
+    function connectDashboard(index) {
+      // Ouvrir la page de login dans un popup
+      const popup = window.open(LOGIN_URLS[index], 'auth_' + index, 'width=500,height=700,left=400,top=100');
+
+      // Surveiller la fermeture du popup
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          loadDashboard(index);
+        }
+      }, 500);
+    }
+
+    function loadDashboard(index) {
+      connected[index] = true;
+      loaded[index] = true;
+
+      // Cacher l'overlay de connexion
+      document.getElementById('connectOverlay' + index).classList.add('hidden');
+      // Montrer le spinner
+      document.getElementById('loading' + index).classList.remove('hidden');
+      // Charger l'iframe
+      document.getElementById('frame' + index).src = URLS[index];
+    }
+
+    function onFrameLoad(index) {
+      if (!loaded[index]) return;
+      document.getElementById('loading' + index).classList.add('hidden');
+      // Marquer l'onglet comme connecté
+      document.getElementById('status' + index).classList.add('connected');
+    }
+
+    function connectAll() {
+      // Ouvrir les 3 pages de login en séquence avec un délai
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          if (!connected[i]) {
+            window.open(LOGIN_URLS[i], 'auth_' + i, 'width=500,height=700,left=' + (200 + i*50) + ',top=' + (100 + i*50));
+          }
+        }, i * 1500);
+      }
+    }
+  </script>
+
+</body>
+</html>
